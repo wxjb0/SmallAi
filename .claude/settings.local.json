@@ -16,7 +16,12 @@
       "Bash(cmd *)",
       "Bash(where git *)",
       "Bash(D:/develop/javaimport/Git/cmd/git.exe *)",
-      "Bash(D:\\\\\\\\develop\\\\\\\\javaimport\\\\\\\\Git\\\\\\\\cmd\\\\\\\\git.exe *)"
+      "Bash(D:\\\\\\\\develop\\\\\\\\javaimport\\\\\\\\Git\\\\\\\\cmd\\\\\\\\git.exe *)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(\"D:/develop/javaimport/Git/cmd/git.exe\" remote *)",
+      "Bash(\"D:/develop/javaimport/Git/cmd/git.exe\" add *)",
+      "Bash(\"D:/develop/javaimport/Git/cmd/git.exe\" status *)"
     ]
   }
 }

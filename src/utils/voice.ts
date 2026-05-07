@@ -14,12 +14,13 @@ export function createSpeechRecognizer(
 
   if (!SpeechRecognition) return null
 
-  const recognition = new (SpeechRecognition as new () => SpeechRecognition)()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognition = new (SpeechRecognition as any)()
   recognition.continuous = true
   recognition.interimResults = true
   recognition.lang = 'zh-CN'
 
-  recognition.onresult = (event: SpeechRecognitionEvent) => {
+  recognition.onresult = (event: any) => {
     let interimTranscript = ''
     let finalTranscript = ''
 
@@ -36,7 +37,7 @@ export function createSpeechRecognizer(
     if (interimTranscript) onResult(interimTranscript, false)
   }
 
-  recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+  recognition.onerror = (event: any) => {
     if (event.error !== 'aborted') {
       onError(event.error === 'no-speech' ? '未检测到语音' : `语音识别错误: ${event.error}`)
     }
