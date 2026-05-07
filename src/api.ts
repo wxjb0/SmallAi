@@ -67,15 +67,6 @@ export async function* streamChat(
   }
 }
 
-function blobToDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = reject
-    reader.readAsDataURL(blob)
-  })
-}
-
 export async function transcribeAudio(audioBlob: Blob): Promise<string> {
   const apiKey = import.meta.env.VITE_ZHIPU_API_KEY
 
@@ -83,18 +74,16 @@ export async function transcribeAudio(audioBlob: Blob): Promise<string> {
     throw new Error('请在 .env 文件中配置 VITE_ZHIPU_API_KEY')
   }
 
-  const dataUrl = await blobToDataUrl(audioBlob)
+  const formData = new FormData()
+  formData.append('file', new File([audioBlob], 'audio.wav', { type: 'audio/wav' }))
+  formData.append('model', 'glm-asr-2512')
 
   const response = await fetch(ASR_URL, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      file: dataUrl,
-      model: 'glm-asr-2512',
-    }),
+    body: formData,
   })
 
   if (!response.ok) {
