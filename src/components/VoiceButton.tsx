@@ -1,13 +1,28 @@
-import { Mic } from 'lucide-react'
+import { Mic, Loader2 } from 'lucide-react'
 
 interface Props {
   isListening: boolean
+  isProcessing: boolean
   isSupported: boolean
   onToggle: () => void
 }
 
-export default function VoiceButton({ isListening, isSupported, onToggle }: Props) {
+export default function VoiceButton({ isListening, isProcessing, isSupported, onToggle }: Props) {
   if (!isSupported) return null
+
+  if (isProcessing) {
+    return (
+      <button
+        type="button"
+        disabled
+        title="识别中..."
+        className="p-2.5 rounded-xl transition flex items-center justify-center cursor-not-allowed"
+        style={{ color: '#f59e0b', background: '#fffbeb', opacity: 0.8 }}
+      >
+        <Loader2 size={20} strokeWidth={1.5} className="animate-spin" />
+      </button>
+    )
+  }
 
   return (
     <button

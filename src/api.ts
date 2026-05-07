@@ -1,6 +1,7 @@
 import type { Message } from './types'
 
 const API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
+const ASR_URL = 'https://open.bigmodel.cn/api/paas/v4/audio/transcriptions'
 
 export async function* streamChat(
   messages: Message[],
@@ -64,4 +65,43 @@ export async function* streamChat(
       }
     }
   }
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
+
+export async function transcribeAudio(audioBlob: Blob): Promise<string> {
+  const apiKey = import.meta.env.VITE_ZHIPU_API_KEY
+
+  if (!apiKey) {
+    throw new Error('请在 .env 文件中配置 VITE_ZHIPU_API_KEY')
+  }
+
+  const dataUrl = await blobToDataUrl(audioBlob)
+
+  const response = await fetch(ASR_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      file: dataUrl,
+      model: 'glm-asr-2512',
+    }),
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(`语音识别失败: ${response.status} ${error}`)
+  }
+
+  const result = await response.json()
+  return result.text ?? ''
 }

@@ -17,7 +17,7 @@ export default function MessageInput({ loading, onSend }: Props) {
   const [imageError, setImageError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const { state: voiceState, isSupported, toggleListening } = useVoiceInput((text) => {
+  const { state: voiceState, error: voiceError, isSupported, toggleListening } = useVoiceInput((text) => {
     setInput((prev) => prev + text)
   })
 
@@ -67,6 +67,12 @@ export default function MessageInput({ loading, onSend }: Props) {
             {imageError}
           </div>
         )}
+        {voiceError && (
+          <div className="mb-2 text-sm flex items-center gap-1.5" style={{ color: '#ef4444' }}>
+            <AlertCircle size={14} strokeWidth={1.5} />
+            {voiceError}
+          </div>
+        )}
         {imagePreview && (
           <div className="mb-2">
             <ImagePreview src={imagePreview} onRemove={removeImage} />
@@ -111,6 +117,7 @@ export default function MessageInput({ loading, onSend }: Props) {
 
           <VoiceButton
             isListening={voiceState === 'listening'}
+            isProcessing={voiceState === 'processing'}
             isSupported={isSupported}
             onToggle={toggleListening}
           />

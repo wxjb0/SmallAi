@@ -1,53 +1,175 @@
-interface SpeechRecognizer {
-  start: () => void
-  stop: () => void
+import { transcribeAudio } from '../api'
+
+export interface VoiceRecorder {
+  startRecording: () => Promise<void>
+  stopRecording: () => Promise<string>
   abort: () => void
+  isSupported: boolean
 }
 
-export function createSpeechRecognizer(
-  onResult: (transcript: string, isFinal: boolean) => void,
-  onError: (error: string) => void,
-  onEnd: () => void
-): SpeechRecognizer | null {
-  const win = window as unknown as Record<string, unknown>
-  const SpeechRecognition = win.SpeechRecognition || win.webkitSpeechRecognition
+function getSupportedMimeType(): string {
+  const types = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/mp4',
+    'audio/ogg;codecs=opus',
+  ]
+  for (const type of types) {
+    if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type)) {
+      return type
+    }
+  }
+  return ''
+}
 
-  if (!SpeechRecognition) return null
+async function convertToWav(blob: Blob): Promise<Blob> {
+  const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+  const audioContext = new AudioContextClass()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const recognition = new (SpeechRecognition as any)()
-  recognition.continuous = true
-  recognition.interimResults = true
-  recognition.lang = 'zh-CN'
+  try {
+    await audioContext.resume()
 
-  recognition.onresult = (event: any) => {
-    let interimTranscript = ''
-    let finalTranscript = ''
+    const arrayBuffer = await blob.arrayBuffer()
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
 
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      const transcript = event.results[i][0].transcript
-      if (event.results[i].isFinal) {
-        finalTranscript += transcript
-      } else {
-        interimTranscript += transcript
+    const numChannels = 1
+    const sampleRate = audioBuffer.sampleRate
+    const length = audioBuffer.length
+    const bytesPerSample = 2
+    const dataSize = length * numChannels * bytesPerSample
+    const buffer = new ArrayBuffer(44 + dataSize)
+    const view = new DataView(buffer)
+
+    const writeString = (offset: number, str: string) => {
+      for (let i = 0; i < str.length; i++) {
+        view.setUint8(offset + i, str.charCodeAt(i))
       }
     }
 
-    if (finalTranscript) onResult(finalTranscript, true)
-    if (interimTranscript) onResult(interimTranscript, false)
-  }
+    writeString(0, 'RIFF')
+    view.setUint32(4, 36 + dataSize, true)
+    writeString(8, 'WAVE')
+    writeString(12, 'fmt ')
+    view.setUint32(16, 16, true)
+    view.setUint16(20, 1, true)
+    view.setUint16(22, numChannels, true)
+    view.setUint32(24, sampleRate, true)
+    view.setUint32(28, sampleRate * numChannels * bytesPerSample, true)
+    view.setUint16(32, numChannels * bytesPerSample, true)
+    view.setUint16(34, 16, true)
+    writeString(36, 'data')
+    view.setUint32(40, dataSize, true)
 
-  recognition.onerror = (event: any) => {
-    if (event.error !== 'aborted') {
-      onError(event.error === 'no-speech' ? '未检测到语音' : `语音识别错误: ${event.error}`)
+    const channelData = audioBuffer.getChannelData(0)
+    let offset = 44
+    for (let i = 0; i < length; i++) {
+      const sample = Math.max(-1, Math.min(1, channelData[i]))
+      view.setInt16(offset, sample * 0x7FFF, true)
+      offset += 2
     }
-  }
 
-  recognition.onend = onEnd
+    return new Blob([buffer], { type: 'audio/wav' })
+  } finally {
+    await audioContext.close()
+  }
+}
+
+export function createVoiceRecorder(): VoiceRecorder {
+  const supported = typeof navigator !== 'undefined'
+    && !!navigator.mediaDevices?.getUserMedia
+    && typeof MediaRecorder !== 'undefined'
+
+  let mediaRecorder: MediaRecorder | null = null
+  let mediaStream: MediaStream | null = null
+  let chunks: Blob[] = []
+  let autoStopTimer: ReturnType<typeof setTimeout> | null = null
+  let abortFlag = false
+
+  const cleanup = () => {
+    if (autoStopTimer) {
+      clearTimeout(autoStopTimer)
+      autoStopTimer = null
+    }
+    if (mediaStream) {
+      mediaStream.getTracks().forEach(t => t.stop())
+      mediaStream = null
+    }
+    mediaRecorder = null
+    chunks = []
+  }
 
   return {
-    start: () => recognition.start(),
-    stop: () => recognition.stop(),
-    abort: () => recognition.abort(),
+    isSupported: supported,
+
+    async startRecording() {
+      if (!supported) throw new Error('浏览器不支持录音功能')
+
+      abortFlag = false
+      chunks = []
+
+      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+
+      const mimeType = getSupportedMimeType()
+      mediaRecorder = mimeType
+        ? new MediaRecorder(mediaStream, { mimeType })
+        : new MediaRecorder(mediaStream)
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data)
+      }
+
+      mediaRecorder.start()
+
+      autoStopTimer = setTimeout(() => {
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+          mediaRecorder.stop()
+        }
+      }, 30000)
+    },
+
+    stopRecording(): Promise<string> {
+      return new Promise((resolve, reject) => {
+        if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+          cleanup()
+          reject(new Error('未在录音中'))
+          return
+        }
+
+        mediaRecorder.onstop = async () => {
+          try {
+            if (abortFlag) {
+              cleanup()
+              resolve('')
+              return
+            }
+
+            const webmBlob = new Blob(chunks, { type: mediaRecorder!.mimeType })
+            cleanup()
+
+            if (webmBlob.size === 0) {
+              reject(new Error('未录制到音频，请重试'))
+              return
+            }
+
+            const wavBlob = await convertToWav(webmBlob)
+            const text = await transcribeAudio(wavBlob)
+            resolve(text)
+          } catch (err) {
+            cleanup()
+            reject(err instanceof Error ? err : new Error('语音识别失败'))
+          }
+        }
+
+        mediaRecorder.stop()
+      })
+    },
+
+    abort() {
+      abortFlag = true
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop()
+      }
+      cleanup()
+    },
   }
 }
