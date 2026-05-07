@@ -74,9 +74,23 @@ export async function transcribeAudio(audioBlob: Blob): Promise<string> {
     throw new Error('请在 .env 文件中配置 VITE_ZHIPU_API_KEY')
   }
 
+  console.log('[ASR] audioBlob size:', audioBlob.size, 'type:', audioBlob.type)
+
+  const file = new File([audioBlob], 'audio.wav', { type: 'audio/wav' })
+  console.log('[ASR] file size:', file.size, 'name:', file.name, 'type:', file.type)
+
   const formData = new FormData()
-  formData.append('file', new File([audioBlob], 'audio.wav', { type: 'audio/wav' }))
+  formData.append('file', file)
   formData.append('model', 'glm-asr-2512')
+
+  console.log('[ASR] FormData entries:')
+  for (const [key, value] of formData.entries()) {
+    if (value instanceof File) {
+      console.log(`  ${key}: File(${value.name}, ${value.size} bytes, ${value.type})`)
+    } else {
+      console.log(`  ${key}: ${value}`)
+    }
+  }
 
   const response = await fetch(ASR_URL, {
     method: 'POST',
@@ -86,11 +100,13 @@ export async function transcribeAudio(audioBlob: Blob): Promise<string> {
     body: formData,
   })
 
+  const respText = await response.text()
+  console.log('[ASR] response status:', response.status, 'body:', respText)
+
   if (!response.ok) {
-    const error = await response.text()
-    throw new Error(`语音识别失败: ${response.status} ${error}`)
+    throw new Error(`语音识别失败: ${response.status} ${respText}`)
   }
 
-  const result = await response.json()
+  const result = JSON.parse(respText)
   return result.text ?? ''
 }

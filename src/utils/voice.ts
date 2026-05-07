@@ -143,7 +143,9 @@ export function createVoiceRecorder(): VoiceRecorder {
               return
             }
 
+            console.log('[Voice] chunks count:', chunks.length)
             const webmBlob = new Blob(chunks, { type: mediaRecorder!.mimeType })
+            console.log('[Voice] webmBlob size:', webmBlob.size, 'type:', webmBlob.type)
             cleanup()
 
             if (webmBlob.size === 0) {
@@ -152,6 +154,7 @@ export function createVoiceRecorder(): VoiceRecorder {
             }
 
             const wavBlob = await convertToWav(webmBlob)
+            console.log('[Voice] wavBlob size:', wavBlob.size, 'type:', wavBlob.type)
             const text = await transcribeAudio(wavBlob)
             resolve(text)
           } catch (err) {
