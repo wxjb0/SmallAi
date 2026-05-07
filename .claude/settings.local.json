@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create *)",
+      "Bash(mkdir -p _tmp_backup)",
+      "Bash(mv PRD.md AGENTS.md TECH_DEDSIGN.md _tmp_backup/)",
+      "Bash(shopt -s dotglob)",
+      "Bash(mv smallai/* .)",
+      "Bash(rmdir smallai *)",
+      "Bash(mv _tmp_backup/* .)",
+      "Bash(rmdir _tmp_backup)",
+      "Bash(npm install *)",
+      "Read(//tmp/**)",
+      "Bash(npm config *)",
+      "Bash(where npm *)",
+      "Bash(cmd *)",
+      "Bash(where git *)",
+      "Bash(D:/develop/javaimport/Git/cmd/git.exe *)",
+      "Bash(D:\\\\\\\\develop\\\\\\\\javaimport\\\\\\\\Git\\\\\\\\cmd\\\\\\\\git.exe *)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(\"D:/develop/javaimport/Git/cmd/git.exe\" remote *)",
+      "Bash(\"D:/develop/javaimport/Git/cmd/git.exe\" add *)",
+      "Bash(\"D:/develop/javaimport/Git/cmd/git.exe\" status *)"
+    ]
+  }
+}
