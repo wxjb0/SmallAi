@@ -9,12 +9,12 @@ export function createSpeechRecognizer(
   onError: (error: string) => void,
   onEnd: () => void
 ): SpeechRecognizer | null {
-  const SpeechRecognition =
-    window.SpeechRecognition || (window as unknown as Record<string, typeof SpeechRecognition>).webkitSpeechRecognition
+  const win = window as unknown as Record<string, unknown>
+  const SpeechRecognition = win.SpeechRecognition || win.webkitSpeechRecognition
 
   if (!SpeechRecognition) return null
 
-  const recognition = new SpeechRecognition()
+  const recognition = new (SpeechRecognition as new () => SpeechRecognition)()
   recognition.continuous = true
   recognition.interimResults = true
   recognition.lang = 'zh-CN'
@@ -36,7 +36,7 @@ export function createSpeechRecognizer(
     if (interimTranscript) onResult(interimTranscript, false)
   }
 
-  recognition.onerror = (event) => {
+  recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
     if (event.error !== 'aborted') {
       onError(event.error === 'no-speech' ? '未检测到语音' : `语音识别错误: ${event.error}`)
     }

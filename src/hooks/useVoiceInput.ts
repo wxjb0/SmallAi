@@ -7,7 +7,7 @@ export function useVoiceInput(onTranscript: (text: string) => void) {
   const [error, setError] = useState<string | null>(null)
   const recognizerRef = useRef<ReturnType<typeof createSpeechRecognizer>>(null)
 
-  const isSupported = typeof window !== 'undefined' && !!(window.SpeechRecognition || (window as unknown as Record<string, unknown>).webkitSpeechRecognition)
+  const isSupported = typeof window !== 'undefined' && !!(window as unknown as Record<string, unknown>).SpeechRecognition
 
   useEffect(() => {
     return () => { recognizerRef.current?.abort() }

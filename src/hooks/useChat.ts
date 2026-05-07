@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import type { Message } from '../types'
+import type { Message, ContentBlock } from '../types'
 import { getRoleById } from '../roles'
 import { streamChat } from '../api'
 import { readImageAsBase64, createImageContent } from '../utils/image'
@@ -23,7 +23,7 @@ export function useChat(session: UseSessionReturn) {
       const active = session.activeSession
       if (!active || (!text.trim() && !imageFile)) return
 
-      let content: string | { type: string; text?: string; image_url?: { url: string } }[] = text
+      let content: string | ContentBlock[] = text
 
       if (imageFile) {
         const base64 = await readImageAsBase64(imageFile)

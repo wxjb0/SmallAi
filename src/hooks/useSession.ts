@@ -66,10 +66,12 @@ export function useSession() {
     (sessionId: string, message: Message) => {
       const sessions = data.sessions.map((s) => {
         if (s.id !== sessionId) return s
-        const title =
-          s.messages.length === 0 && message.role === 'user'
+        let title = s.title
+        if (s.messages.length === 0 && message.role === 'user') {
+          title = typeof message.content === 'string'
             ? message.content.slice(0, 20) || '新对话'
-            : s.title
+            : message.content.find((b) => b.type === 'text')?.text?.slice(0, 20) ?? '[图片]'
+        }
         return {
           ...s,
           title,

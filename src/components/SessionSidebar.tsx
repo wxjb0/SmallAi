@@ -1,5 +1,5 @@
 import type { Session } from '../types'
-import { getRoleById, ROLE_ICONS, ROLE_COLORS } from '../roles'
+import { ROLE_ICONS, ROLE_COLORS } from '../roles'
 import { Hexagon, Plus, X } from 'lucide-react'
 
 interface Props {
@@ -50,7 +50,6 @@ export default function SessionSidebar({
           </div>
         )}
         {sessions.map((session) => {
-          const role = getRoleById(session.roleId)
           const Icon = ROLE_ICONS[session.roleId]
           const color = ROLE_COLORS[session.roleId]
           const lastMsg = session.messages[session.messages.length - 1]
